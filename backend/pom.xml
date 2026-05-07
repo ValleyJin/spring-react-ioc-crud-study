@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  이 pom.xml은 Spring Boot 백엔드의 빌드 설정 파일이다.
+  Maven은 이 파일을 읽고 어떤 라이브러리를 내려받을지, 어떤 플러그인을 쓸지 결정한다.
+
+  학습 포인트:
+  1. parent로 Spring Boot를 지정하면 의존성 버전 관리를 대부분 위임할 수 있다.
+  2. starter 의존성은 여러 관련 라이브러리를 묶어서 가져온다.
+  3. build plugin은 실행/패키징 방식을 정의한다.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <!-- Spring Boot 3.5.x는 2026년 기준 공식 문서에 stable 라인으로 제공된다. -->
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.14</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example</groupId>
+    <artifactId>study-backend</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>study-backend</name>
+    <description>Spring Boot IoC + React Query CRUD study backend</description>
+
+    <properties>
+        <!-- Java 21을 사용한다. -->
+        <java.version>21</java.version>
+    </properties>
+
+    <dependencies>
+        <!-- REST API를 만들기 위한 Spring MVC 기능 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JPA 기반 ORM / Repository / Entity 관리 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- DTO 요청 검증용 @Valid, @NotBlank 등 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- 학습용 인메모리 데이터베이스 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- 테스트용. 지금 프로젝트의 핵심은 실행 구조이지만,
+             이후 단위 테스트 / 통합 테스트 확장에 사용할 수 있다. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- spring-boot:run, jar 패키징 등을 쉽게 해주는 플러그인 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
