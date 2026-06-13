@@ -5,6 +5,9 @@ frontend/dist
 # backend
 backend/target
 
+# framework_example (mini IoC framework — 별도 Maven 프로젝트)
+framework_example/target
+
 # IDE
 .idea
 .vscode
