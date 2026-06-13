@@ -30,7 +30,7 @@
     <description>Spring Boot IoC + React Query CRUD study backend</description>
 
     <properties>
-        <!-- Java 21을 사용한다. -->
+        <!-- 컴파일 타겟: Java 21 (실제 빌드 JDK는 JAVA_HOME/Toolchains가 결정) -->  
         <java.version>21</java.version>
     </properties>
 

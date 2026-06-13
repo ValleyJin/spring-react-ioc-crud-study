@@ -1,0 +1,10 @@
+com/example/myframework/annotation/MyComponent.class
+com/example/myframework/Main.class
+com/example/myframework/annotation/MyPostConstruct.class
+com/example/myframework/container/MyContainer.class
+com/example/myframework/annotation/MyPreDestroy.class
+com/example/myframework/domain/Elephant.class
+com/example/myframework/domain/Lion.class
+com/example/myframework/domain/Zoo.class
+com/example/myframework/domain/Animal.class
+com/example/myframework/annotation/MyInject.class
