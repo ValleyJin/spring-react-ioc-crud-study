@@ -844,6 +844,453 @@ interface Predator {
 
 ---
 
+#### 🧠 잠깐 — "인터페이스를 이용한 이 과정이 결국은 DIP 아닌가?"
+
+> 학생이 0.5~0.8 의 흐름을 보고 던지기 쉬운 통찰 질문입니다.
+> **정확히 맞습니다.** 박응용 선생님은 0.5~0.8 절에서 **DIP(의존 역전 원칙)** 라는 단어를 한 번도 쓰지 않지만, 사실 그 모든 과정은 **DIP 의 교과서적 예시** 입니다. 한 단계씩 매핑해 봅시다.
+
+##### (1) ZooKeeper / Predator 예제를 DIP 언어로 다시 쓰면
+
+DIP 의 원문 정의 (Robert C. Martin, 1996):
+
+> "**상위 모듈은 하위 모듈에 의존해서는 안 된다. 둘 다 추상화에 의존해야 한다.**
+> **추상화는 세부 사항에 의존해서는 안 된다. 세부 사항이 추상화에 의존해야 한다.**"
+
+이걸 0.5~0.7 의 코드에 그대로 매핑:
+
+| DIP 용어 | 0.5~0.7 의 실제 코드 |
+| --- | --- |
+| **상위 모듈** (정책·중요 비즈니스) | `ZooKeeper` |
+| **하위 모듈** (구체 세부) | `Tiger`, `Lion`, `Crocodile`, `Leopard`, … |
+| **추상화** (계약·역할) | `Predator` 인터페이스 |
+| **세부 사항이 추상화에 의존** | `Tiger implements Predator`, `Lion implements Predator` |
+
+##### (2) 의존 화살표가 진짜 "역전" 되는 모습
+
+**0.5 절 — DIP 위반 (수직 의존, 자연스럽지만 깨지기 쉬움)**
+
+```
+         ZooKeeper
+            │  ← "Tiger 와 Lion 을 직접 안다"
+            ├──────▶ Tiger
+            └──────▶ Lion
+                    (새 동물 추가될 때마다 ZooKeeper 코드 수정 필요)
+```
+
+`ZooKeeper.feed(Tiger)`, `ZooKeeper.feed(Lion)` 처럼 **메서드 시그니처에 구체 타입 이름이 박혀 있음** → 상위(`ZooKeeper`)가 하위(`Tiger`, `Lion`)에 직접 의존.
+
+**0.6~0.7 절 — DIP 적용 후 (의존 화살표 역전)**
+
+```
+         ZooKeeper
+            │
+            ▼
+        Predator (인터페이스)
+            ▲
+            ├──────── Tiger     ← "내가 Predator 를 따른다"
+            └──────── Lion         하위가 위로 의존
+```
+
+이제:
+- `ZooKeeper.feed(Predator predator)` — **상위는 추상에만 의존**
+- `class Tiger implements Predator` — **하위가 추상으로 (위로) 의존**
+
+→ 박응용 선생님이 0.8 에서 강조하신 다음 문장이 곧 **DIP 의 정의** 입니다:
+
+> 💬 "`ZooKeeper` 클래스가 특정 동물 클래스에 **의존하던** 코드에서 동물 클래스와 무관한 **독립적인** 코드로 변했다는 것이 핵심이다."
+
+이 문장만 봐도 — "의존하던 → 독립적인" — 정확히 DIP 의 효과를 표현하고 있습니다.
+
+##### (3) "역전" 의 두 번째 의미도 이미 일어났다 — 인터페이스 소유권
+
+DIP 가 "역전" 인 두 번째 이유는 **인터페이스를 누가 정의하는가** 입니다.
+
+| 전통적 흐름 | 박응용 예제의 흐름 (DIP) |
+| --- | --- |
+| `Tiger`, `Lion` 이 자기 API 를 정의 → `ZooKeeper` 가 그것에 맞춰 호출 | **`ZooKeeper` 의 입장에서 "나는 `Predator` 한 가지 역할만 받겠다" 라고 `Predator` 인터페이스를 정의** → `Tiger`, `Lion` 이 거기에 맞춰 구현 |
+
+박응용 선생님이 0.6 끝에서 말한 그 문장:
+
+> 💬 "보통 **중요 클래스(`ZooKeeper`)를 작성하는 시점** 에서는 클래스의 구현체(`Tiger`, `Lion`)가 몇 개가 될지 알 수 없으므로 **인터페이스(`Predator`)를 정의하여** 인터페이스를 기준으로 메서드(`feed`)를 만드는 것이 효율적이다."
+
+→ 이게 정확히 **"상위 모듈(중요 클래스)이 인터페이스의 소유권을 갖는다"** 는 DIP 의 핵심을 말씀하신 겁니다. 이름만 안 붙였을 뿐.
+
+##### (4) 그런데 — 아직 DIP "절반" 만 일어났다
+
+여기서 멈추면 DIP 의 절반만 한 셈입니다. 0.7 코드를 다시 보면:
+
+```java
+public class Sample {
+    public static void main(String[] args) {
+        ZooKeeper zooKeeper = new ZooKeeper();
+        Tiger tiger = new Tiger();        // ← 누군가는 여전히 new Tiger() 를 한다
+        Lion lion = new Lion();           // ← 누군가는 여전히 new Lion() 을 한다
+        zooKeeper.feed(tiger);
+        zooKeeper.feed(lion);
+    }
+}
+```
+
+`ZooKeeper` 본체는 깔끔해졌지만, **`main` 에 `new Tiger()`, `new Lion()` 이 그대로 박혀 있습니다.** 이 줄들은 **누가 어떤 구체 클래스를 만들 것인가** 를 여전히 우리 손으로 결정하고 있다는 뜻입니다.
+
+이 마지막 책임을 **컨테이너(프레임워크)에 넘기는 단계** 가 바로 **IoC(제어의 역전) + DI(의존성 주입)** 입니다.
+
+| 단계 | 무엇이 일어났나 | 어디서 배우나 |
+| --- | --- | --- |
+| **1단계 — DIP** | `ZooKeeper` 가 `Predator` 인터페이스에만 의존하도록 설계 변경 | **0.5~0.8 (이미 완료)** |
+| **2단계 — IoC / DI** | `new Tiger()`, `new Lion()` 도 컨테이너가 대신 해주고, `ZooKeeper` 에 자동 주입 | 1.1, 1.2, 그리고 7장 `MyContainer` |
+| **3단계 — OCP 자동 달성** | 새 `Crocodile` 이 들어와도 `main` 한 줄도 안 고침. `Crocodile implements Predator` 만 추가하면 됨 | 1.2.7 의 "DIP + IoC = OCP" |
+
+> 💡 그래서 1.1 절 도입부에서 **"DIP 가 '어떻게 설계할까' 의 원칙이라면, IoC 는 '그 설계를 어떻게 굴릴까' 의 메커니즘"** 이라고 정리한 겁니다. 0.5~0.8 이 **설계(DIP)** 까지를, 본 강의 1장~7장이 **운영(IoC)** 까지를 책임집니다.
+
+##### (4-A) 2단계 — IoC / DI 를 코드로 깊이 보기
+
+> 🎯 이 절에서는 0.7 의 ZooKeeper 코드를 **세 번에 걸쳐 점진적으로 리팩터링** 하면서, "new 를 어디로 옮기는가" 가 곧 IoC 의 본질임을 직접 눈으로 확인합니다.
+> 모든 코드는 `~/myframework/chapter_0/Sample.java` 한 파일에 그대로 붙여넣고 `javac Sample.java && java Sample` 로 실행할 수 있습니다.
+
+###### Step 0 — 출발점 (DIP 만 적용된 0.7 상태)
+
+```java
+interface Predator {
+    String getFood();
+}
+
+class Animal {
+    String name;
+    void setName(String name) { this.name = name; }
+}
+
+class Tiger extends Animal implements Predator {
+    @Override public String getFood() { return "apple"; }
+}
+
+class Lion extends Animal implements Predator {
+    @Override public String getFood() { return "banana"; }
+}
+
+class ZooKeeper {
+    void feed(Predator predator) {
+        System.out.println("feed " + predator.getFood());
+    }
+}
+
+public class Sample {
+    public static void main(String[] args) {
+        ZooKeeper zooKeeper = new ZooKeeper();   // ⚠️ main 이 직접 만든다
+        Tiger tiger = new Tiger();               // ⚠️ main 이 직접 만든다
+        Lion lion = new Lion();                  // ⚠️ main 이 직접 만든다
+
+        zooKeeper.feed(tiger);
+        zooKeeper.feed(lion);
+    }
+}
+```
+
+실행:
+```
+feed apple
+feed banana
+```
+
+문제는 보이는 그대로입니다. **`main` 이 모든 객체 생성을 떠맡고 있고**, 새 동물이 추가되면 `main` 도 함께 수정됩니다. "**누가, 언제, 어떤 구체 클래스로** 객체를 만들지" 의 제어권이 100% 개발자 손에 있는 상태 — 이게 바로 IoC 가 적용되지 않은 모습입니다.
+
+###### Step 1 — **수동 DI (생성자 주입)**: ZooKeeper 가 자기 의존성을 외부에서 받기
+
+가장 작은 한 걸음입니다. `ZooKeeper` 가 자기에게 필요한 `Predator` 목록을 **생성자에서 받아 보관** 하고, 한 번에 모두에게 `feed` 합니다.
+
+```java
+import java.util.List;
+
+interface Predator { String getFood(); }
+
+class Tiger implements Predator {
+    @Override public String getFood() { return "apple"; }
+}
+
+class Lion implements Predator {
+    @Override public String getFood() { return "banana"; }
+}
+
+class ZooKeeper {
+    private final List<Predator> predators;   // ① 외부에서 받은 의존성을 보관
+
+    public ZooKeeper(List<Predator> predators) {   // ② 생성자로 주입받음
+        this.predators = predators;
+    }
+
+    void feedAll() {
+        for (Predator p : predators) {
+            System.out.println("feed " + p.getFood());
+        }
+    }
+}
+
+public class Sample {
+    public static void main(String[] args) {
+        // main 은 "조립 책임자" 역할만 한다 — 어떤 동물을 ZooKeeper 에게 줄지 결정
+        ZooKeeper zooKeeper = new ZooKeeper(List.of(new Tiger(), new Lion()));
+        zooKeeper.feedAll();
+    }
+}
+```
+
+**무엇이 달라졌나** — 한 줄씩 짚어 봅시다:
+
+- ① `ZooKeeper` 안에 `new Tiger()`, `new Lion()` 이 **한 글자도 없습니다.** `ZooKeeper` 는 이제 "동물을 어떻게 만드는가" 를 모릅니다. 알 필요도 없습니다.
+- ② 의존성은 **밖에서 들어옵니다(injected)** → 이게 바로 **DI(Dependency Injection)**.
+- ③ 누가 어떤 동물을 넣을지 결정하는 책임은 `main` 으로 옮겨졌습니다. `ZooKeeper` 의 본문에서는 사라졌습니다.
+
+**테스트하기가 갑자기 쉬워졌다는 점** 에 주목하세요:
+
+```java
+// 가짜(Mock) Predator 를 넣어 ZooKeeper 의 동작만 검증할 수 있다
+ZooKeeper zk = new ZooKeeper(List.of(() -> "mock-food"));   // 람다로 즉석 구현체
+zk.feedAll();   // → "feed mock-food"
+```
+
+> 💡 **수동 DI 만으로도 큰 진전입니다.** 하지만 `main` 안에는 여전히 `new Tiger()`, `new Lion()` 이 박혀 있습니다. 새 동물이 추가되면 `main` 도 고쳐야 합니다 — 즉, **OCP 는 아직 절반만 달성**.
+
+###### Step 2 — **미니 컨테이너**: `new` 책임까지 외부로 빼기
+
+이번에는 객체 생성 자체를 **`AnimalContainer` 라는 별도 객체** 에게 맡깁니다. `main` 은 "컨테이너 켜라" 정도만 합니다.
+
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+interface Predator { String getFood(); }
+
+class Tiger implements Predator {
+    @Override public String getFood() { return "apple"; }
+}
+
+class Lion implements Predator {
+    @Override public String getFood() { return "banana"; }
+}
+
+class ZooKeeper {
+    private final List<Predator> predators;
+    public ZooKeeper(List<Predator> predators) { this.predators = predators; }
+
+    void feedAll() {
+        for (Predator p : predators) System.out.println("feed " + p.getFood());
+    }
+}
+
+// 🎯 미니 IoC 컨테이너 — 객체 생성과 조립을 전담
+class AnimalContainer {
+    private final List<Predator> predators = new ArrayList<>();
+    private ZooKeeper zooKeeper;
+
+    public void init() {
+        // ① 모든 Predator 구현체를 직접 new 한다 (= 이 책임이 main 에서 컨테이너로 이동!)
+        predators.add(new Tiger());
+        predators.add(new Lion());
+
+        // ② 만들어진 객체들을 ZooKeeper 에게 주입한다 (= DI)
+        zooKeeper = new ZooKeeper(predators);
+    }
+
+    public ZooKeeper getZooKeeper() { return zooKeeper; }
+}
+
+public class Sample {
+    public static void main(String[] args) {
+        AnimalContainer container = new AnimalContainer();
+        container.init();                          // 컨테이너에게 조립을 부탁
+        ZooKeeper zk = container.getZooKeeper();   // 완성된 ZooKeeper 를 받아옴
+        zk.feedAll();
+    }
+}
+```
+
+실행:
+```
+feed apple
+feed banana
+```
+
+**이제 일어난 일을 분명히 봅시다:**
+
+| 책임 | Step 0 | Step 1 | **Step 2** |
+| --- | --- | --- | --- |
+| `Predator` 인터페이스로 추상화 | ✅ (이미 0.6에서) | ✅ | ✅ |
+| `ZooKeeper` 가 구체 동물을 모름 | ✅ | ✅ | ✅ |
+| `new Tiger()` 위치 | `main` | `main` | **`AnimalContainer`** |
+| `main` 이 동물 종류를 앎? | 예 (직접 new) | 예 (직접 new) | **❌ 모름** |
+| 새 동물 추가 시 고칠 곳 | `main` + 어디든 | `main` | **`AnimalContainer` 한 곳만** |
+
+> 🎯 **이게 바로 "제어의 역전(Inversion of Control)" 의 핵심입니다.**
+> Step 0/1 에서는 **내(main) 가 컨테이너를 부르고 객체를 만들었**다면, Step 2 에서는 **컨테이너가 객체를 만들어서 내(`ZooKeeper`)에게 던져 줍니다.**
+> 비유로 자주 쓰는 헐리우드 원칙: **"Don't call us, we'll call you."**
+
+###### Step 3 — 어노테이션이 더해지면? (본 강의 7장의 미리보기)
+
+위 `AnimalContainer.init()` 안에는 여전히 `predators.add(new Tiger())` 같은 줄이 **사람 손으로** 적혀 있습니다. **이 마지막 한 줄까지 자동화** 하는 게 본 강의 4~7장에서 만들 `MyContainer` 입니다.
+
+```java
+@MyComponent
+class Tiger implements Predator { ... }
+
+@MyComponent
+class Lion implements Predator { ... }
+
+@MyComponent
+class ZooKeeper {
+    @MyInject private List<Predator> predators;   // 컨테이너가 자동으로 채워줌
+    ...
+}
+
+// main 은 이게 전부:
+MyContainer ctx = new MyContainer("com.example");
+ZooKeeper zk = ctx.getBean(ZooKeeper.class);
+zk.feedAll();
+```
+
+- `@MyComponent` 가 붙은 클래스를 **컨테이너가 스캔해서 자동으로 `new`** — Step 2 의 `predators.add(new Tiger())` 줄이 **사라집니다.**
+- `@MyInject` 가 붙은 필드를 **컨테이너가 리플렉션으로 채워줌** — Step 1·2 의 생성자 인자 전달이 **사라집니다.**
+- **결과적으로 `main` 에 더는 어떤 동물의 이름도 등장하지 않습니다.**
+
+> 👉 그래서 본 강의가 "DI 컨테이너" 라는 단어를 강조하는 겁니다. **Step 1 = DI, Step 2 = IoC 컨테이너, Step 3 = 어노테이션 기반 자동 IoC 컨테이너(= Spring 스타일)**. 셋 다 같은 방향의 다른 깊이일 뿐입니다.
+
+---
+
+##### (4-B) 3단계 — OCP 가 자동으로 달성되는 모습
+
+> 🎯 이 절은 짧지만 가장 통쾌한 부분입니다. 위 Step 2 코드를 만들어 둔 상태에서 **새 육식동물 `Crocodile`** 을 추가하는 실험을 해 봅니다.
+> "기존 코드를 한 줄도 안 고치고 새 기능이 들어간다" 는 **OCP(개방-폐쇄 원칙)** 의 정의가 코드로 어떻게 나타나는지 직접 확인할 수 있습니다.
+
+###### BEFORE — DIP 도 IoC 도 없는 세계에서 Crocodile 을 추가하면?
+
+(0.5 절 초반의 `ZooKeeper` 를 떠올려 보세요.)
+
+```java
+class ZooKeeper {
+    void feed(Tiger tiger)         { System.out.println("feed apple"); }
+    void feed(Lion lion)           { System.out.println("feed banana"); }
+    void feed(Crocodile crocodile) { System.out.println("feed strawberry"); } // ⚠️ 추가
+}
+
+public class Sample {
+    public static void main(String[] args) {
+        ZooKeeper zk = new ZooKeeper();
+        Tiger t = new Tiger();
+        Lion l = new Lion();
+        Crocodile c = new Crocodile();   // ⚠️ 추가
+        zk.feed(t); zk.feed(l); zk.feed(c);  // ⚠️ 호출 줄도 추가
+    }
+}
+```
+
+**고쳐야 하는 곳**: `ZooKeeper` (메서드 추가) + `main` (변수 + 호출 추가) + 새 `Crocodile` 파일. **세 군데** 가 동시에 손을 탑니다.
+이건 **"변경에 열려 있는" 코드 = OCP 위반** 입니다.
+
+###### AFTER — Step 2 코드에 Crocodile 을 추가하면?
+
+위 Step 2 의 `Sample.java` 에 **`Crocodile` 클래스 한 개만** 추가하고, **`AnimalContainer.init()` 에 한 줄만** 더하면 끝납니다.
+
+**변경 1 — 새 클래스 추가 (확장에 "열려있음")**
+
+```java
+class Crocodile implements Predator {
+    @Override public String getFood() { return "strawberry"; }
+}
+```
+
+**변경 2 — 컨테이너에 새 동물 등록 (단 한 줄)**
+
+```java
+class AnimalContainer {
+    private final List<Predator> predators = new ArrayList<>();
+    private ZooKeeper zooKeeper;
+
+    public void init() {
+        predators.add(new Tiger());
+        predators.add(new Lion());
+        predators.add(new Crocodile());   // ✨ 이 한 줄만 추가
+        zooKeeper = new ZooKeeper(predators);
+    }
+    public ZooKeeper getZooKeeper() { return zooKeeper; }
+}
+```
+
+**변경되지 않는 곳들 (변경에 "닫혀있음")**
+
+- ❌ `Predator` 인터페이스 — 그대로
+- ❌ `Tiger`, `Lion` — 그대로
+- ❌ `ZooKeeper` — **한 글자도 안 바뀜** ← 이 한 줄이 OCP 의 정수
+- ❌ `main` — **한 글자도 안 바뀜**
+
+실행 결과:
+```
+feed apple
+feed banana
+feed strawberry
+```
+
+**왜 이게 가능한가?**
+
+- `ZooKeeper` 는 `Predator` 라는 **계약(인터페이스)** 만 알기 때문에 (= 1단계 DIP의 효과).
+- 객체 생성은 `AnimalContainer` 가 책임지기 때문에 (= 2단계 IoC의 효과).
+- 새 구현체(`Crocodile`)는 **계약을 지키기만 하면** 기존 코드를 한 줄도 깨지 않고 합류할 수 있음 (= 3단계 OCP의 결과).
+
+###### 본 강의 7장 `MyContainer` 에서는 더 짧아집니다
+
+Step 3 (어노테이션 기반) 으로 가면 `AnimalContainer.init()` 의 그 한 줄(`predators.add(new Crocodile())`) 마저도 사라집니다:
+
+```java
+@MyComponent
+class Crocodile implements Predator {
+    @Override public String getFood() { return "strawberry"; }
+}
+```
+
+**이 파일 하나만 추가** 하면 `MyContainer` 가 스캔 → `new` → `ZooKeeper` 의 `List<Predator>` 에 자동 주입까지 다 해 줍니다. **다른 어떤 파일도 손대지 않습니다.** 이것이 Spring 이 칭송받는 "**플러그인처럼 갈아끼우는 확장성**" 의 정체입니다.
+
+###### 한 줄 정리 — 3단계 흐름의 가치
+
+| 단계 | 한 줄 효과 | 실험 |
+| --- | --- | --- |
+| 1단계 (DIP) | `ZooKeeper` 가 구체 동물을 모르게 만듦 | 0.6~0.7 의 `void feed(Predator p)` |
+| 2단계 (IoC/DI) | `ZooKeeper` 도, `main` 도 `new` 를 하지 않게 만듦 | Step 2 의 `AnimalContainer` |
+| **3단계 (OCP)** | **새 동물이 들어와도 기존 파일을 안 건드림** | 위 Crocodile 추가 실험 |
+
+> 👉 1단계 + 2단계가 만들어 낸 **자동 결과** 가 3단계입니다.
+> 즉, **OCP 는 따로 노력해서 얻는 것이 아니라, DIP + IoC 를 제대로 하면 저절로 따라오는 보너스** 입니다. 이게 1.2.7 의 **"DIP + IoC = OCP"** 가 의미하는 바입니다.
+
+---
+
+##### (5) 박응용 예제를 본 강의 코드로 한 번에 변환해 보기
+
+방금 발견한 그 통찰이 본 강의 코드에서 어떻게 등장하는지 비교:
+
+| 박응용 (0.5~0.8) | 본 강의 5~7장 | 본 강의 1.2 (Pay 사례) |
+| --- | --- | --- |
+| `interface Predator` | `interface Animal` | `interface Pay` |
+| `class Tiger implements Predator` | `class Lion implements Animal` | `class KakaoPay implements Pay` |
+| `class Lion implements Predator` | `class Elephant implements Animal` | `class NaverPay implements Pay` |
+| `class ZooKeeper { void feed(Predator p) }` | `class Zoo { List<Animal> animals }` | `class PaymentService { List<Pay> pays }` |
+| `new Tiger()` (main 에 박혀 있음) | `@MyComponent` + `MyContainer` 가 대신 `new` | `@MyComponent` + `MyContainer` 가 대신 `new` |
+| `new Lion()` (main 에 박혀 있음) | `@MyInject List<Animal>` | `@MyInject List<Pay>` |
+| **결과**: ZooKeeper 는 동물 종류와 무관 | **결과**: Zoo 는 동물 종류와 무관 + `new` 도 안 함 | **결과**: PaymentService 는 결제 종류와 무관 + `new` 도 안 함 |
+
+##### (6) 한 줄 정리
+
+| 질문 | 답 |
+| --- | --- |
+| "0.5~0.8 의 과정이 DIP 인가?" | ✅ **정확히 DIP 입니다.** 박응용 선생님은 이름을 안 붙였을 뿐, 의존 화살표 역전 + 인터페이스 소유권 역전이 모두 등장합니다. |
+| "그럼 0장에서 이미 DIP 를 다 배운 건가?" | ✅ 설계 측면은 다 배웠습니다. 남은 건 **객체 생성을 컨테이너에 위임하는 IoC** 만. 이게 1.1, 1.2, 그리고 7장 `MyContainer` 의 주제입니다. |
+| "왜 그럼 1.1 에서 DIP 를 또 설명하나?" | 0장은 **"이게 가능하구나"** 를 보여 줬다면, 1.1 은 **"이게 왜 중요한가 — 그리고 IoC 와 어떻게 만나는가"** 를 설명합니다. 한 번에 두 단계를 보여 주면 학생이 지치니까, **0장에서 씨앗 → 1장에서 발아** 의 구조로 분리한 것입니다. |
+| "이 통찰을 잡으면 뭐가 좋은가?" | 7장의 모든 코드가 **"이미 알고 있는 그것을, 컨테이너가 대신 해주는 것뿐"** 으로 자연스럽게 읽힙니다. 정확히 그 시각이 본 강의가 의도한 학습 경로입니다. |
+
+> 👉 그래서 0.11(다리) 절 매핑 표에 미리 적어 둔 한 줄이 결국 이 통찰을 가리킵니다:
+>
+> 💬 *"특히 1.1 의 DIP 와 1.2 의 Pay 사례는, 결국 **'`ZooKeeper` 가 `Predator` 라는 인터페이스에만 의존했더니 새 동물이 들어와도 `ZooKeeper` 코드를 안 고쳐도 된다'** 는 0.5~0.8 의 통찰을 결제 도메인으로 옮긴 것입니다."*
+
+이 통찰을 잡았다면 1장은 거의 복습처럼 읽힐 겁니다.
+
+---
+
 <a id="sec-0-10"></a>
 ### 0.10 추상 클래스 (abstract class)
 
