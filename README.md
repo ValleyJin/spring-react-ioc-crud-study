@@ -4,6 +4,10 @@
 **Vite + React의 Hooks / TanStack Query 기반 서버 연동 CRUD / 렌더링 최적화**를  
 한 번에 학습하기 위한 풀스택 예제입니다.
 
+# 사전학습
+
+이 프로젝트를 막바로 이해하기 힘든 경우, [framework_example](./framework_example/) 폴더의 [강의](./framework_example/example_강의.md)를 먼저 공부하고 오세요.
+
 ## 이 프로젝트로 배우는 것
 
 ### 백엔드
